@@ -190,55 +190,69 @@ class onePA:
         )
         return df
 
-    @staticmethod
-    def availability_plot_times(df):
-        base_chart = alt.Chart(df).encode(
-            x=alt.X("date(startTime):O", title="Day of Month"),
-            y=alt.Y("hoursminutes(startTime):O", title="Start Time"),
-            tooltip=["timeRangeName", "isPeak", "isAvailable", "day(startTime)"],
-            href="bookingUrl:N",
-        )
 
-        available_slots = base_chart.transform_filter(alt.datum.isAvailable > 0).encode(
+def availability_plot_times(df):
+    base_chart = alt.Chart(df).encode(
+        x=alt.X(
+            "date(startTime):O",
+            title="Day of Month",
+            sort=alt.EncodingSortField(field="startTime", order="ascending"),
+        ),
+        y=alt.Y("hoursminutes(startTime):O", title="Start Time"),
+        tooltip=[
+            "timeRangeName",
+            "isPeak",
+            "isAvailable",
+            alt.Tooltip("day(startTime)", title="day"),
+            alt.Tooltip("startTime:T", title="date"),
+        ],
+        href="bookingUrl:N",
+    )
+
+    available_slots = base_chart.transform_filter(alt.datum.isAvailable > 0).encode(
+        color=alt.Color(
+            "isAvailable:O",
+            scale=alt.Scale(
+                scheme="yellowgreen"
+            ),  # https://vega.github.io/vega/docs/schemes/
+            legend=alt.Legend(title="Available slots"),
+        )
+    )
+
+    chart = available_slots.mark_rect() + base_chart.mark_rect(opacity=0)
+
+    chart["usermeta"] = {"embedOptions": {"loader": {"target": "_blank"}}}
+    return chart.properties(title="No. of available slots by time, date")
+
+
+def availability_plot_dates(df):
+    chart = (
+        alt.Chart(df)
+        .mark_rect()
+        .encode(
+            x=alt.X(
+                "date(date):O",
+                title="Day of Month",
+                sort=alt.EncodingSortField(field="date", order="ascending"),
+            ),
+            y=alt.Y("outlet:N"),
             color=alt.Color(
-                "isAvailable:O",
+                "count:O",
                 scale=alt.Scale(
                     scheme="yellowgreen"
                 ),  # https://vega.github.io/vega/docs/schemes/
                 legend=alt.Legend(title="Available slots"),
-            )
+            ),
+            href="bookingUrl:N",
+            tooltip=[
+                "outlet",
+                "count",
+                "publicPrice",
+                "membersPrice",
+                alt.Tooltip("day(date)", title="day"),
+                "date",
+            ],
         )
-
-        chart = available_slots.mark_rect() + base_chart.mark_rect(opacity=0)
-
-        chart["usermeta"] = {"embedOptions": {"loader": {"target": "_blank"}}}
-        return chart.properties(title="No. of available slots by time, date")
-
-    @staticmethod
-    def availability_plot_dates(df):
-        chart = (
-            alt.Chart(df)
-            .mark_rect()
-            .encode(
-                x=alt.X("date(date):O", title="Day of Month"),
-                y=alt.Y("outlet:N"),
-                color=alt.Color(
-                    "count:O",
-                    scale=alt.Scale(
-                        scheme="yellowgreen"
-                    ),  # https://vega.github.io/vega/docs/schemes/
-                    legend=alt.Legend(title="Available slots"),
-                ),
-                href="bookingUrl:N",
-                tooltip=[
-                    "outlet",
-                    "count",
-                    "publicPrice",
-                    "membersPrice",
-                    "date",
-                    "day(date)",
-                ],
-            )
-        )
-        chart["usermeta"] = {"embedOptions": {"loader": {"target": "_blank"}}}
-        return chart.properties(title="No. of slots by location, date")
+    )
+    chart["usermeta"] = {"embedOptions": {"loader": {"target": "_blank"}}}
+    return chart.properties(title="No. of slots by location, date")
